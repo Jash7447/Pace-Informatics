@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, ShoppingCart, PackagePlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Product {
@@ -45,10 +45,15 @@ interface ProductTableProps {
 
 export default function ProductTable({ selectedCategory, searchQuery, onProductChange }: ProductTableProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]); // For sell dialog
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSellDialogOpen, setIsSellDialogOpen] = useState(false);
+  const [isAddStockDialogOpen, setIsAddStockDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [addingStockProduct, setAddingStockProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Array<{ _id: string; name: string }>>([]);
+  const [addStockQuantity, setAddStockQuantity] = useState(1);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -59,6 +64,14 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     location: '',
     remarks: '',
     category: '',
+  });
+
+  // Sell form state
+  const [sellFormData, setSellFormData] = useState({
+    category: '',
+    productSearch: '',
+    selectedProduct: '',
+    quantity: 1,
   });
 
   const fetchProducts = async () => {
@@ -75,6 +88,18 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       console.error('Failed to fetch products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      const data = await response.json();
+      if (data.success) {
+        setAllProducts(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch all products:', error);
     }
   };
 
@@ -96,6 +121,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchAllProducts();
   }, [selectedCategory]);
 
   useEffect(() => {
@@ -168,6 +194,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       if (data.success) {
         handleCloseDialog();
         fetchProducts();
+        fetchAllProducts();
         onProductChange?.();
       } else {
         alert(data.error || 'Failed to save product');
@@ -189,6 +216,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       const data = await response.json();
       if (data.success) {
         fetchProducts();
+        fetchAllProducts();
         onProductChange?.();
       } else {
         alert(data.error || 'Failed to delete product');
@@ -196,6 +224,157 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     } catch (error) {
       console.error('Failed to delete product:', error);
       alert('Failed to delete product');
+    }
+  };
+
+  // Filter products for sell dialog
+  const getFilteredProductsForSell = () => {
+    let filtered = allProducts;
+
+    // Filter by category
+    if (sellFormData.category) {
+      filtered = filtered.filter(
+        (p) => p.category._id === sellFormData.category
+      );
+    }
+
+    // Filter by search text
+    if (sellFormData.productSearch) {
+      const searchLower = sellFormData.productSearch.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.brand.toLowerCase().includes(searchLower) ||
+          p.model.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  };
+
+  const handleSellProduct = async () => {
+    if (!sellFormData.selectedProduct || !sellFormData.quantity || sellFormData.quantity <= 0) {
+      alert('Please select a product and enter a valid quantity');
+      return;
+    }
+
+    const selectedProduct = allProducts.find(
+      (p) => p._id === sellFormData.selectedProduct
+    );
+
+    if (!selectedProduct) {
+      alert('Product not found');
+      return;
+    }
+
+    if (selectedProduct.stock < sellFormData.quantity) {
+      alert(`Insufficient stock! Available: ${selectedProduct.stock}`);
+      return;
+    }
+
+    try {
+      const newStock = selectedProduct.stock - sellFormData.quantity;
+      
+      // Extract category ID if it's an object, otherwise use the string directly
+      const categoryId = typeof selectedProduct.category === 'object' 
+        ? selectedProduct.category._id 
+        : selectedProduct.category;
+      
+      const response = await fetch(`/api/products/${selectedProduct._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedProduct.name,
+          brand: selectedProduct.brand,
+          model: selectedProduct.model,
+          stock: newStock,
+          location: selectedProduct.location,
+          remarks: selectedProduct.remarks || '',
+          category: categoryId,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert(`Successfully sold ${sellFormData.quantity} unit(s) of ${selectedProduct.name}`);
+        setIsSellDialogOpen(false);
+        setSellFormData({
+          category: '',
+          productSearch: '',
+          selectedProduct: '',
+          quantity: 1,
+        });
+        fetchProducts();
+        fetchAllProducts();
+        onProductChange?.();
+      } else {
+        alert(data.error || 'Failed to sell product');
+      }
+    } catch (error) {
+      console.error('Failed to sell product:', error);
+      alert('Failed to sell product');
+    }
+  };
+
+  const handleOpenSellDialog = () => {
+    setIsSellDialogOpen(true);
+    setSellFormData({
+      category: selectedCategory || '',
+      productSearch: '',
+      selectedProduct: '',
+      quantity: 1,
+    });
+  };
+
+  const handleOpenAddStockDialog = (product: Product) => {
+    setAddingStockProduct(product);
+    setAddStockQuantity(1);
+    setIsAddStockDialogOpen(true);
+  };
+
+  const handleAddStock = async () => {
+    if (!addingStockProduct || !addStockQuantity || addStockQuantity <= 0) {
+      alert('Please enter a valid quantity');
+      return;
+    }
+
+    try {
+      const newStock = addingStockProduct.stock + addStockQuantity;
+      
+      // Extract category ID if it's an object, otherwise use the string directly
+      const categoryId = typeof addingStockProduct.category === 'object' 
+        ? addingStockProduct.category._id 
+        : addingStockProduct.category;
+      
+      const response = await fetch(`/api/products/${addingStockProduct._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: addingStockProduct.name,
+          brand: addingStockProduct.brand,
+          model: addingStockProduct.model,
+          stock: newStock,
+          location: addingStockProduct.location,
+          remarks: addingStockProduct.remarks || '',
+          category: categoryId,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert(`Successfully added ${addStockQuantity} unit(s) to ${addingStockProduct.name}. New stock: ${newStock}`);
+        setIsAddStockDialogOpen(false);
+        setAddingStockProduct(null);
+        setAddStockQuantity(1);
+        fetchProducts();
+        fetchAllProducts();
+        onProductChange?.();
+      } else {
+        alert(data.error || 'Failed to add stock');
+      }
+    } catch (error) {
+      console.error('Failed to add stock:', error);
+      alert('Failed to add stock');
     }
   };
 
@@ -213,13 +392,178 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     <div className="flex-1 overflow-hidden flex flex-col">
       <div className="flex items-center justify-between p-6 border-b">
         <h2 className="text-2xl font-semibold">Product List</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isSellDialogOpen} onOpenChange={setIsSellDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={handleOpenSellDialog}>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Sell Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Sell Product</DialogTitle>
+                <DialogDescription>
+                  Select a product and enter the quantity to sell.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="sell-category" className="text-sm font-medium">
+                    Category *
+                  </label>
+                  <select
+                    id="sell-category"
+                    value={sellFormData.category}
+                    onChange={(e) =>
+                      setSellFormData({
+                        ...sellFormData,
+                        category: e.target.value,
+                        selectedProduct: '', // Reset product when category changes
+                        productSearch: '', // Reset search when category changes
+                      })
+                    }
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="sell-product" className="text-sm font-medium">
+                    Select Product *
+                  </label>
+                  <select
+                    id="sell-product"
+                    value={sellFormData.selectedProduct}
+                    onChange={(e) =>
+                      setSellFormData({
+                        ...sellFormData,
+                        selectedProduct: e.target.value,
+                      })
+                    }
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Select a product</option>
+                    {getFilteredProductsForSell().map((product) => (
+                      <option key={product._id} value={product._id}>
+                        {product.name} - {product.brand} {product.model} (Stock: {product.stock})
+                      </option>
+                    ))}
+                  </select>
+                  {getFilteredProductsForSell().length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No products found. Try adjusting your search or category filter.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="sell-quantity" className="text-sm font-medium">
+                    Quantity to Sell *
+                  </label>
+                  <Input
+                    id="sell-quantity"
+                    type="number"
+                    min="1"
+                    value={sellFormData.quantity}
+                    onChange={(e) =>
+                      setSellFormData({
+                        ...sellFormData,
+                        quantity: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    placeholder="Enter quantity"
+                  />
+                  {sellFormData.selectedProduct && (
+                    <p className="text-xs text-muted-foreground">
+                      Available stock: {
+                        allProducts.find((p) => p._id === sellFormData.selectedProduct)
+                          ?.stock || 0
+                      }
+                    </p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSellDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSellProduct}>Sell Product</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddStockDialogOpen} onOpenChange={setIsAddStockDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Stock</DialogTitle>
+                <DialogDescription>
+                  Increase the stock quantity for {addingStockProduct?.name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="current-stock" className="text-sm font-medium">
+                    Current Stock
+                  </label>
+                  <Input
+                    id="current-stock"
+                    value={addingStockProduct?.stock || 0}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="add-quantity" className="text-sm font-medium">
+                    Quantity to Add *
+                  </label>
+                  <Input
+                    id="add-quantity"
+                    type="number"
+                    min="1"
+                    value={addStockQuantity}
+                    onChange={(e) => setAddStockQuantity(parseInt(e.target.value) || 1)}
+                    placeholder="Enter quantity to add"
+                  />
+                </div>
+                {addingStockProduct && (
+                  <div className="rounded-md bg-muted p-3">
+                    <p className="text-sm font-medium">New Stock:</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {addingStockProduct.stock + addStockQuantity}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddStockDialogOpen(false);
+                    setAddingStockProduct(null);
+                    setAddStockQuantity(1);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleAddStock}>Add Stock</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -337,6 +681,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
@@ -395,7 +740,16 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleOpenAddStockDialog(product)}
+                          title="Add Stock"
+                        >
+                          <PackagePlus className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleOpenDialog(product)}
+                          title="Edit Product"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -403,6 +757,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(product._id)}
+                          title="Delete Product"
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>

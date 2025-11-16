@@ -6,11 +6,11 @@ import mongoose from 'mongoose';
 // PUT update a category
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = await Promise.resolve(params);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -53,11 +53,11 @@ export async function PUT(
 // DELETE a category
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = await Promise.resolve(params);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
