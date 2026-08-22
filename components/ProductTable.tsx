@@ -44,9 +44,10 @@ interface ProductTableProps {
   selectedCategory: string | null;
   searchQuery: string;
   onProductChange?: () => void;
+  refreshTrigger?: number;
 }
 
-export default function ProductTable({ selectedCategory, searchQuery, onProductChange }: ProductTableProps) {
+export default function ProductTable({ selectedCategory, searchQuery, onProductChange, refreshTrigger }: ProductTableProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]); // For sell dialog
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
   const [addingStockProduct, setAddingStockProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Array<{ _id: string; name: string }>>([]);
   const [addStockQuantity, setAddStockQuantity] = useState(1);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -128,7 +129,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     fetchProducts();
     fetchCategories();
     fetchAllProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, refreshTrigger]);
 
   useEffect(() => {
     if (selectedCategory && categories.length > 0) {
@@ -300,12 +301,12 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
 
     try {
       const newStock = selectedProduct.stock - sellFormData.quantity;
-      
+
       // Extract category ID if it's an object, otherwise use the string directly
-      const categoryId = typeof selectedProduct.category === 'object' 
-        ? selectedProduct.category._id 
+      const categoryId = typeof selectedProduct.category === 'object'
+        ? selectedProduct.category._id
         : selectedProduct.category;
-      
+
       const response = await fetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -373,12 +374,12 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
 
     try {
       const newStock = addingStockProduct.stock + addStockQuantity;
-      
+
       // Extract category ID if it's an object, otherwise use the string directly
-      const categoryId = typeof addingStockProduct.category === 'object' 
-        ? addingStockProduct.category._id 
+      const categoryId = typeof addingStockProduct.category === 'object'
+        ? addingStockProduct.category._id
         : addingStockProduct.category;
-      
+
       const response = await fetch(`/api/products/${addingStockProduct._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -470,7 +471,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="sell-product" className="text-sm font-medium">
                     Select Product *
@@ -645,152 +646,152 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                 Add Product
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingProduct
-                  ? 'Update the product information below.'
-                  : 'Fill in the details to add a new product to your inventory.'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="name" className="text-sm font-medium">
-                    Product Name *
-                  </label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter product name"
-                  />
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingProduct
+                    ? 'Update the product information below.'
+                    : 'Fill in the details to add a new product to your inventory.'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="text-sm font-medium">
+                      Product Name *
+                    </label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter product name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="brand" className="text-sm font-medium">
+                      Brand *
+                    </label>
+                    <Input
+                      id="brand"
+                      value={formData.brand}
+                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                      placeholder="Enter brand"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="model" className="text-sm font-medium">
+                      Model
+                    </label>
+                    <Input
+                      id="model"
+                      value={formData.model}
+                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      placeholder="Enter model"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="serialNumber" className="text-sm font-medium">
+                      Sr. No.
+                    </label>
+                    <Input
+                      id="serialNumber"
+                      value={formData.serialNumber}
+                      onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                      placeholder="Enter serial number"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="stock" className="text-sm font-medium">
+                      Stock *
+                    </label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={formData.stock}
+                      onChange={(e) =>
+                        setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })
+                      }
+                      placeholder="Enter stock quantity"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="costPrice" className="text-sm font-medium">
+                      Cost Price (₹) *
+                    </label>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.costPrice || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="Enter cost price per unit"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="location" className="text-sm font-medium">
+                      Location
+                    </label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="Enter location"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="category" className="text-sm font-medium">
+                      Category *
+                    </label>
+                    <select
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="brand" className="text-sm font-medium">
-                    Brand *
+                  <label htmlFor="remarks" className="text-sm font-medium">
+                    Remarks
                   </label>
                   <Input
-                    id="brand"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    placeholder="Enter brand"
+                    id="remarks"
+                    value={formData.remarks}
+                    onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                    placeholder="Optional remarks or notes"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="model" className="text-sm font-medium">
-                    Model
-                  </label>
-                  <Input
-                    id="model"
-                    value={formData.model}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    placeholder="Enter model"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="serialNumber" className="text-sm font-medium">
-                    Sr. No.
-                  </label>
-                  <Input
-                    id="serialNumber"
-                    value={formData.serialNumber}
-                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                    placeholder="Enter serial number"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="stock" className="text-sm font-medium">
-                    Stock *
-                  </label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })
-                    }
-                    placeholder="Enter stock quantity"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="costPrice" className="text-sm font-medium">
-                    Cost Price (₹) *
-                  </label>
-                  <Input
-                    id="costPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.costPrice || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })
-                    }
-                    placeholder="Enter cost price per unit"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="location" className="text-sm font-medium">
-                    Location
-                  </label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Enter location"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="category" className="text-sm font-medium">
-                    Category *
-                  </label>
-                  <select
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="remarks" className="text-sm font-medium">
-                  Remarks
-                </label>
-                <Input
-                  id="remarks"
-                  value={formData.remarks}
-                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                  placeholder="Optional remarks or notes"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCloseDialog}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit}>
-                {editingProduct ? 'Update Product' : 'Create Product'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCloseDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit}>
+                  {editingProduct ? 'Update Product' : 'Create Product'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
       <div className="flex-1 overflow-auto p-6">
@@ -835,8 +836,8 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                           product.stock === 0
                             ? 'destructive'
                             : product.stock < 10
-                            ? 'secondary'
-                            : 'default'
+                              ? 'secondary'
+                              : 'default'
                         }
                       >
                         {product.stock}

@@ -2,23 +2,57 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
+import Transaction from '@/models/Transaction';
 
 // GET statistics
 export async function GET() {
   try {
-    console.log('Connecting to MongoDB');
     await connectDB();
-    console.log('Connected to MongoDB');
-    // Total products count
+
+    // Total products and categories count
     const totalProducts = await Product.countDocuments();
-    
-    // Category-wise product count
-    const categoryStats = await Product.aggregate([
+    const totalCategories = await Category.countDocuments();
+
+    // 1. Inventory Valuation Overall (Total cost, total retail value, potential profit)
+    const valuationSummaryArray = await Product.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalStock: { $sum: '$stock' },
+          totalCost: { $sum: { $multiply: [{ $ifNull: ['$costPrice', 0] }, '$stock'] } },
+          totalRetail: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$sellPrice', { $ifNull: ['$costPrice', 0] }] },
+                '$stock',
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const valuationSummary = valuationSummaryArray[0] || {
+      totalStock: 0,
+      totalCost: 0,
+      totalRetail: 0,
+    };
+
+    // Category breakdown for inventory valuation
+    const categoryValuation = await Product.aggregate([
       {
         $group: {
           _id: '$category',
-          count: { $sum: 1 },
           totalStock: { $sum: '$stock' },
+          valuationCost: { $sum: { $multiply: [{ $ifNull: ['$costPrice', 0] }, '$stock'] } },
+          valuationRetail: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$sellPrice', { $ifNull: ['$costPrice', 0] }] },
+                '$stock',
+              ],
+            },
+          },
         },
       },
       {
@@ -29,39 +63,66 @@ export async function GET() {
           as: 'categoryInfo',
         },
       },
-      {
-        $unwind: '$categoryInfo',
-      },
+      { $unwind: '$categoryInfo' },
       {
         $project: {
           categoryName: '$categoryInfo.name',
-          count: 1,
           totalStock: 1,
+          valuationCost: 1,
+          valuationRetail: 1,
         },
       },
+      { $sort: { categoryName: 1 } },
     ]);
 
-    // Stock levels summary
-    const stockSummary = await Product.aggregate([
+    // 2. Weekly Profit (Week-on-Week profit over last 8 weeks)
+    const startOfPeriod = new Date();
+    startOfPeriod.setDate(startOfPeriod.getDate() - 8 * 7); // ~8 weeks ago
+
+    const weeklyStatsRaw = await Transaction.aggregate([
+      {
+        $match: {
+          type: 'sell',
+          createdAt: { $gte: startOfPeriod },
+        },
+      },
       {
         $group: {
-          _id: null,
-          totalStock: { $sum: '$stock' },
-          lowStock: {
-            $sum: { $cond: [{ $lt: ['$stock', 10] }, 1, 0] },
+          _id: {
+            year: { $year: '$createdAt' },
+            week: { $week: '$createdAt' },
           },
-          inStock: {
-            $sum: { $cond: [{ $gte: ['$stock', 10] }, 1, 0] },
-          },
-          outOfStock: {
-            $sum: { $cond: [{ $eq: ['$stock', 0] }, 1, 0] },
-          },
+          revenue: { $sum: { $multiply: [{ $ifNull: ['$sellPrice', 0] }, '$quantity'] } },
+          cost: { $sum: { $multiply: [{ $ifNull: ['$costPrice', 0] }, '$quantity'] } },
+          profit: { $sum: { $ifNull: ['$profit', 0] } },
+          startDate: { $min: '$createdAt' },
         },
+      },
+      {
+        $sort: { '_id.year': 1, '_id.week': 1 },
       },
     ]);
 
-    // Total categories count
-    const totalCategories = await Category.countDocuments();
+    // Format weekly stats for simpler frontend rendering
+    const weeklyProfit = weeklyStatsRaw.map((w) => {
+      const date = new Date(w.startDate);
+      const label = `Week ${w._id.week} (${date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })})`;
+      return {
+        label,
+        revenue: w.revenue,
+        cost: w.cost,
+        profit: w.profit,
+      };
+    });
+
+    // 3. Recent Sales / Profits Table
+    const recentSales = await Transaction.find({ type: 'sell' })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('productName brand quantity costPrice sellPrice profit createdAt');
 
     return NextResponse.json(
       {
@@ -69,22 +130,24 @@ export async function GET() {
         data: {
           totalProducts,
           totalCategories,
-          categoryStats,
-          stockSummary: stockSummary[0] || {
-            totalStock: 0,
-            lowStock: 0,
-            inStock: 0,
-            outOfStock: 0,
+          valuation: {
+            totalStock: valuationSummary.totalStock,
+            totalCost: valuationSummary.totalCost,
+            totalRetail: valuationSummary.totalRetail,
+            potentialProfit: Math.max(0, valuationSummary.totalRetail - valuationSummary.totalCost),
+            categoryValuation,
           },
+          weeklyProfit,
+          recentSales,
         },
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Stats aggregation failed:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch statistics' },
       { status: 500 }
     );
   }
 }
-

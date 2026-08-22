@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 // PUT update a product
@@ -30,6 +31,14 @@ export async function PUT(
       );
     }
 
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return NextResponse.json(
+        { success: false, error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (brand !== undefined) updateData.brand = brand;
@@ -52,6 +61,47 @@ export async function PUT(
         { success: false, error: 'Product not found' },
         { status: 404 }
       );
+    }
+
+    // Check stock difference for transaction logging
+    if (stock !== undefined) {
+      const newStock = Number(stock);
+      const stockDiff = newStock - existingProduct.stock;
+
+      if (stockDiff !== 0) {
+        try {
+          if (stockDiff > 0) {
+            // Stock added
+            await Transaction.create({
+              product: product._id,
+              productName: product.name,
+              brand: product.brand,
+              type: 'add',
+              quantity: stockDiff,
+              costPrice: costPrice !== undefined ? Number(costPrice) : existingProduct.costPrice,
+            });
+          } else {
+            // Stock sold
+            const quantitySold = Math.abs(stockDiff);
+            const txCostPrice = costPrice !== undefined ? Number(costPrice) : existingProduct.costPrice;
+            const txSellPrice = sellPrice !== undefined && sellPrice !== '' ? Number(sellPrice) : (existingProduct.sellPrice || txCostPrice);
+            const profit = (txSellPrice - txCostPrice) * quantitySold;
+
+            await Transaction.create({
+              product: product._id,
+              productName: product.name,
+              brand: product.brand,
+              type: 'sell',
+              quantity: quantitySold,
+              costPrice: txCostPrice,
+              sellPrice: txSellPrice,
+              profit: profit,
+            });
+          }
+        } catch (err) {
+          console.error('Failed to log product update transaction:', err);
+        }
+      }
     }
 
     return NextResponse.json({ success: true, data: product }, { status: 200 });

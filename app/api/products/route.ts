@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 // GET all products (optionally filtered by category)
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     const products = await Product.find(query)
       .populate('category', 'name')
       .sort({ createdAt: -1 });
-    
+
     return NextResponse.json({ success: true, data: products }, { status: 200 });
   } catch (error) {
     return NextResponse.json(
@@ -64,6 +65,22 @@ export async function POST(request: NextRequest) {
     });
 
     await product.populate('category', 'name');
+
+    // Create transaction if stock > 0
+    if (Number(stock) > 0) {
+      try {
+        await Transaction.create({
+          product: product._id,
+          productName: name,
+          brand,
+          type: 'add',
+          quantity: Number(stock),
+          costPrice: Number(costPrice) || 0,
+        });
+      } catch (err) {
+        console.error('Failed to log product creation transaction:', err);
+      }
+    }
 
     return NextResponse.json({ success: true, data: product }, { status: 201 });
   } catch (error: any) {

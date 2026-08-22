@@ -26,10 +26,11 @@ export default function Home() {
           onCategoryChange={triggerStatsRefresh}
         />
         <main className="flex-1 overflow-hidden bg-gray-50/50 min-w-0">
-          <ProductTable 
-            selectedCategory={selectedCategory} 
+          <ProductTable
+            selectedCategory={selectedCategory}
             searchQuery={searchQuery}
             onProductChange={triggerStatsRefresh}
+            refreshTrigger={statsRefreshTrigger}
           />
         </main>
         <StatsSidebar refreshTrigger={statsRefreshTrigger} />

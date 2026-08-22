@@ -2,25 +2,40 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { TrendingUp, DollarSign, Archive, Layers } from 'lucide-react';
 
 interface Stats {
   totalProducts: number;
   totalCategories: number;
-  categoryStats: Array<{
-    categoryName: string;
-    count: number;
+  valuation: {
     totalStock: number;
-  }>;
-  stockSummary: {
-    totalStock: number;
-    lowStock: number;
-    inStock: number;
-    outOfStock: number;
+    totalCost: number;
+    totalRetail: number;
+    potentialProfit: number;
+    categoryValuation: Array<{
+      categoryName: string;
+      totalStock: number;
+      valuationCost: number;
+      valuationRetail: number;
+    }>;
   };
+  weeklyProfit: Array<{
+    label: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+  }>;
+  recentSales: Array<{
+    _id: string;
+    productName: string;
+    brand: string;
+    quantity: number;
+    costPrice: number;
+    sellPrice: number;
+    profit: number;
+    createdAt: string;
+  }>;
 }
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
 
 interface StatsSidebarProps {
   refreshTrigger?: number;
@@ -46,29 +61,18 @@ export default function StatsSidebar({ refreshTrigger }: StatsSidebarProps) {
     };
 
     fetchStats();
-    // Optionally keep a longer interval as fallback (e.g., 5 minutes)
-    // const interval = setInterval(fetchStats, 300000);
-    // return () => clearInterval(interval);
   }, [refreshTrigger]);
-
-  const pieData = stats?.stockSummary
-    ? [
-        { name: 'In Stock (≥10)', value: stats.stockSummary.inStock },
-        { name: 'Low Stock (<10)', value: stats.stockSummary.lowStock },
-        { name: 'Out of Stock', value: stats.stockSummary.outOfStock },
-      ].filter((item) => item.value > 0)
-    : [];
 
   if (loading) {
     return (
-      <aside className="w-80 border-l bg-white p-4 overflow-y-auto">
+      <aside className="w-80 border-l bg-white p-4 overflow-y-auto hidden lg:block">
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Statistics</CardTitle>
+              <CardTitle>Inventory Stats</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Loading...</p>
+              <p className="text-sm text-muted-foreground">Loading summary...</p>
             </CardContent>
           </Card>
         </div>
@@ -76,110 +80,155 @@ export default function StatsSidebar({ refreshTrigger }: StatsSidebarProps) {
     );
   }
 
+  const valuation = stats?.valuation || {
+    totalStock: 0,
+    totalCost: 0,
+    totalRetail: 0,
+    potentialProfit: 0,
+    categoryValuation: [],
+  };
+
   return (
-    <aside className="w-80 border-l bg-white p-4 overflow-y-auto">
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Statistics</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-2xl font-bold">{stats?.totalProducts || 0}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Categories</p>
-                <p className="text-2xl font-bold">{stats?.totalCategories || 0}</p>
-              </div>
+    <aside className="w-80 border-l bg-white p-4 overflow-y-auto hidden lg:flex flex-col space-y-4">
+      {/* Overview Card */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Inventory Valuation
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <span className="text-xs text-muted-foreground">Total Stock Valuation (Cost)</span>
+            <p className="text-2xl font-extrabold text-slate-800">
+              ₹{(valuation.totalCost ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+            <div>
+              <span className="text-muted-foreground">Retail Value</span>
+              <p className="font-bold text-slate-700">
+                ₹{(valuation.totalRetail ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Total Stock</p>
-              <p className="text-2xl font-bold">{stats?.stockSummary.totalStock || 0}</p>
+              <span className="text-muted-foreground">Potential Profit</span>
+              <p className="font-bold text-green-600">
+                ₹{(valuation.potentialProfit ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {stats && stats.categoryStats.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Products by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={stats.categoryStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="categoryName"
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    fontSize={12}
-                  />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+      {/* Category Valuation Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Valuation by Category
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 max-h-56 overflow-y-auto">
+          {valuation.categoryValuation.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-4 text-center">No categories to evaluate.</p>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b bg-muted/40 text-muted-foreground select-none">
+                  <th className="p-2 font-medium">Category</th>
+                  <th className="p-2 text-right font-medium">Stock</th>
+                  <th className="p-2 text-right font-medium">Cost Val</th>
+                </tr>
+              </thead>
+              <tbody>
+                {valuation.categoryValuation.map((cat, idx) => (
+                  <tr key={idx} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="p-2 font-medium truncate max-w-[100px]" title={cat.categoryName}>
+                      {cat.categoryName}
+                    </td>
+                    <td className="p-2 text-right">{cat.totalStock}</td>
+                    <td className="p-2 text-right font-semibold">
+                      ₹{cat.valuationCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
 
-        {pieData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock Levels</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+      {/* Weekly Profit (WoW) */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Profit Week-on-Week
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!stats?.weeklyProfit || stats.weeklyProfit.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-4 text-center">No transactions recorded inside past 8 weeks.</p>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b bg-muted/40 text-muted-foreground">
+                  <th className="p-2 font-medium">Week Range</th>
+                  <th className="p-2 text-right font-medium">Revenue</th>
+                  <th className="p-2 text-right font-medium">Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.weeklyProfit.map((w, idx) => (
+                  <tr key={idx} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="p-2 text-slate-600 font-medium">{w.label}</td>
+                    <td className="p-2 text-right">₹{w.revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                    <td className="p-2 text-right font-bold text-green-600">
+                      ₹{w.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
 
-        {stats && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">In Stock (≥10):</span>
-                <span className="font-semibold">{stats.stockSummary.inStock}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Low Stock (&lt;10):</span>
-                <span className="font-semibold">{stats.stockSummary.lowStock}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Out of Stock:</span>
-                <span className="font-semibold">{stats.stockSummary.outOfStock}</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Recent Sales Activity */}
+      <Card className="flex-1 min-h-0 flex flex-col">
+        <CardHeader className="pb-2 shrink-0">
+          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Recent Sales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 flex-1 overflow-y-auto">
+          {!stats?.recentSales || stats.recentSales.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-4 text-center">No recent sales transactions recorded.</p>
+          ) : (
+            <div className="divide-y text-xs">
+              {stats.recentSales.map((tx) => (
+                <div key={tx._id} className="p-2.5 hover:bg-muted/30 transition-colors flex justify-between items-start gap-2">
+                  <div className="truncate flex-1">
+                    <p className="font-semibold text-slate-800 truncate" title={tx.productName}>
+                      {tx.productName}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {tx.brand} · Qty: {tx.quantity} · Price: ₹{tx.sellPrice}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-green-600">
+                      +₹{tx.profit?.toLocaleString('en-IN', { maximumFractionDigits: 0 }) || '0'}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {new Date(tx.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </aside>
   );
 }
-
