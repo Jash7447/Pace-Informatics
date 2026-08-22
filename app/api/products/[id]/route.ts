@@ -20,7 +20,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, brand, model, stock, location, remarks, category } = body;
+    const { name, brand, model, serialNumber, stock, costPrice, sellPrice, location, remarks, category } = body;
 
     // If category is being updated, validate it
     if (category && !mongoose.Types.ObjectId.isValid(category)) {
@@ -34,7 +34,10 @@ export async function PUT(
     if (name !== undefined) updateData.name = name;
     if (brand !== undefined) updateData.brand = brand;
     if (model !== undefined) updateData.model = model;
+    if (serialNumber !== undefined) updateData.serialNumber = serialNumber;
     if (stock !== undefined) updateData.stock = Number(stock);
+    if (costPrice !== undefined) updateData.costPrice = Number(costPrice);
+    if (sellPrice !== undefined) updateData.sellPrice = sellPrice === '' ? undefined : Number(sellPrice);
     if (location !== undefined) updateData.location = location;
     if (remarks !== undefined) updateData.remarks = remarks;
     if (category !== undefined) updateData.category = category;

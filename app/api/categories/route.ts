@@ -19,7 +19,9 @@ export async function GET() {
 // POST create a new category
 export async function POST(request: NextRequest) {
   try {
+    console.log("Connecting to MongoDB");
     await connectDB();
+    console.log("Connected to MongoDB");
     const body = await request.json();
     const { name, description } = body;
 

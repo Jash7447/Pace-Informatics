@@ -27,9 +27,12 @@ interface Product {
   _id: string;
   name: string;
   brand: string;
-  model: string;
+  model?: string;
+  serialNumber?: string;
   stock: number;
-  location: string;
+  costPrice: number;
+  sellPrice?: number;
+  location?: string;
   remarks?: string;
   category: {
     _id: string;
@@ -60,7 +63,9 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     name: '',
     brand: '',
     model: '',
+    serialNumber: '',
     stock: 0,
+    costPrice: 0,
     location: '',
     remarks: '',
     category: '',
@@ -72,6 +77,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     productSearch: '',
     selectedProduct: '',
     quantity: 1,
+    sellPrice: 0,
   });
 
   const fetchProducts = async () => {
@@ -135,7 +141,9 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       name: '',
       brand: '',
       model: '',
+      serialNumber: '',
       stock: 0,
+      costPrice: 0,
       location: '',
       remarks: '',
       category: selectedCategory || '',
@@ -149,9 +157,11 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       setFormData({
         name: product.name,
         brand: product.brand,
-        model: product.model,
+        model: product.model || '',
+        serialNumber: product.serialNumber || '',
         stock: product.stock,
-        location: product.location,
+        costPrice: product.costPrice,
+        location: product.location || '',
         remarks: product.remarks || '',
         category: product.category._id,
       });
@@ -170,9 +180,8 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     if (
       !formData.name ||
       !formData.brand ||
-      !formData.model ||
-      !formData.location ||
-      !formData.category
+      !formData.category ||
+      formData.costPrice < 0
     ) {
       alert('Please fill in all required fields');
       return;
@@ -245,16 +254,33 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
         (p) =>
           p.name.toLowerCase().includes(searchLower) ||
           p.brand.toLowerCase().includes(searchLower) ||
-          p.model.toLowerCase().includes(searchLower)
+          (p.model || '').toLowerCase().includes(searchLower) ||
+          (p.serialNumber || '').toLowerCase().includes(searchLower)
       );
     }
 
     return filtered;
   };
 
+  const getSelectedSellProduct = () =>
+    allProducts.find((p) => p._id === sellFormData.selectedProduct);
+
+  const sellProfitPerUnit =
+    sellFormData.sellPrice > 0 && getSelectedSellProduct()
+      ? sellFormData.sellPrice - (getSelectedSellProduct()!.costPrice ?? 0)
+      : null;
+
+  const sellTotalProfit =
+    sellProfitPerUnit !== null ? sellProfitPerUnit * sellFormData.quantity : null;
+
   const handleSellProduct = async () => {
     if (!sellFormData.selectedProduct || !sellFormData.quantity || sellFormData.quantity <= 0) {
       alert('Please select a product and enter a valid quantity');
+      return;
+    }
+
+    if (!sellFormData.sellPrice || sellFormData.sellPrice <= 0) {
+      alert('Please enter a valid selling price');
       return;
     }
 
@@ -287,7 +313,10 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
           name: selectedProduct.name,
           brand: selectedProduct.brand,
           model: selectedProduct.model,
+          serialNumber: selectedProduct.serialNumber,
           stock: newStock,
+          costPrice: selectedProduct.costPrice,
+          sellPrice: sellFormData.sellPrice,
           location: selectedProduct.location,
           remarks: selectedProduct.remarks || '',
           category: categoryId,
@@ -296,13 +325,16 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
 
       const data = await response.json();
       if (data.success) {
-        alert(`Successfully sold ${sellFormData.quantity} unit(s) of ${selectedProduct.name}`);
+        alert(
+          `Successfully sold ${sellFormData.quantity} unit(s) of ${selectedProduct.name}. Profit: ₹${((sellFormData.sellPrice - selectedProduct.costPrice) * sellFormData.quantity).toFixed(2)}`
+        );
         setIsSellDialogOpen(false);
         setSellFormData({
           category: '',
           productSearch: '',
           selectedProduct: '',
           quantity: 1,
+          sellPrice: 0,
         });
         fetchProducts();
         fetchAllProducts();
@@ -323,6 +355,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
       productSearch: '',
       selectedProduct: '',
       quantity: 1,
+      sellPrice: 0,
     });
   };
 
@@ -353,7 +386,10 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
           name: addingStockProduct.name,
           brand: addingStockProduct.brand,
           model: addingStockProduct.model,
+          serialNumber: addingStockProduct.serialNumber,
           stock: newStock,
+          costPrice: addingStockProduct.costPrice,
+          sellPrice: addingStockProduct.sellPrice,
           location: addingStockProduct.location,
           remarks: addingStockProduct.remarks || '',
           category: categoryId,
@@ -383,8 +419,9 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
     return (
       product.name.toLowerCase().includes(searchLower) ||
       product.brand.toLowerCase().includes(searchLower) ||
-      product.model.toLowerCase().includes(searchLower) ||
-      product.location.toLowerCase().includes(searchLower)
+      (product.model || '').toLowerCase().includes(searchLower) ||
+      (product.serialNumber || '').toLowerCase().includes(searchLower) ||
+      (product.location || '').toLowerCase().includes(searchLower)
     );
   });
 
@@ -441,18 +478,23 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                   <select
                     id="sell-product"
                     value={sellFormData.selectedProduct}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const productId = e.target.value;
+                      const product = allProducts.find((p) => p._id === productId);
                       setSellFormData({
                         ...sellFormData,
-                        selectedProduct: e.target.value,
-                      })
-                    }
+                        selectedProduct: productId,
+                        sellPrice: product?.sellPrice ?? product?.costPrice ?? 0,
+                      });
+                    }}
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Select a product</option>
                     {getFilteredProductsForSell().map((product) => (
                       <option key={product._id} value={product._id}>
-                        {product.name} - {product.brand} {product.model} (Stock: {product.stock})
+                        {product.name} - {product.brand}
+                        {product.model ? ` ${product.model}` : ''}
+                        {product.serialNumber ? ` (Sr. ${product.serialNumber})` : ''} (Stock: {product.stock})
                       </option>
                     ))}
                   </select>
@@ -481,13 +523,52 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                   />
                   {sellFormData.selectedProduct && (
                     <p className="text-xs text-muted-foreground">
-                      Available stock: {
-                        allProducts.find((p) => p._id === sellFormData.selectedProduct)
-                          ?.stock || 0
-                      }
+                      Available stock: {getSelectedSellProduct()?.stock || 0}
+                      {' · '}
+                      Cost price: ₹{(getSelectedSellProduct()?.costPrice ?? 0).toFixed(2)}
                     </p>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="sell-price" className="text-sm font-medium">
+                    Selling Price (per unit) *
+                  </label>
+                  <Input
+                    id="sell-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={sellFormData.sellPrice || ''}
+                    onChange={(e) =>
+                      setSellFormData({
+                        ...sellFormData,
+                        sellPrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="Enter selling price"
+                  />
+                </div>
+                {sellFormData.selectedProduct && sellFormData.sellPrice > 0 && sellProfitPerUnit !== null && (
+                  <div className="rounded-md bg-muted p-3 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Profit per unit:</span>
+                      <span className={`font-semibold ${sellProfitPerUnit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ₹{sellProfitPerUnit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total profit ({sellFormData.quantity} unit{sellFormData.quantity !== 1 ? 's' : ''}):</span>
+                      <span className={`font-bold text-lg ${sellTotalProfit! >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ₹{sellTotalProfit!.toFixed(2)}
+                      </span>
+                    </div>
+                    {getSelectedSellProduct()!.costPrice > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Margin: {((sellProfitPerUnit / (getSelectedSellProduct()!.costPrice ?? 1)) * 100).toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button
@@ -603,7 +684,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="model" className="text-sm font-medium">
-                    Model *
+                    Model
                   </label>
                   <Input
                     id="model"
@@ -612,6 +693,19 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                     placeholder="Enter model"
                   />
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="serialNumber" className="text-sm font-medium">
+                    Sr. No.
+                  </label>
+                  <Input
+                    id="serialNumber"
+                    value={formData.serialNumber}
+                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                    placeholder="Enter serial number"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="stock" className="text-sm font-medium">
                     Stock *
@@ -627,11 +721,27 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                     placeholder="Enter stock quantity"
                   />
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="costPrice" className="text-sm font-medium">
+                    Cost Price (₹) *
+                  </label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.costPrice || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })
+                    }
+                    placeholder="Enter cost price per unit"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="location" className="text-sm font-medium">
-                    Location *
+                    Location
                   </label>
                   <Input
                     id="location"
@@ -702,7 +812,10 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                   <TableHead>Name</TableHead>
                   <TableHead>Brand</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Sr. No.</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead>Cost Price</TableHead>
+                  <TableHead>Sell Price</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Remarks</TableHead>
@@ -714,7 +827,8 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                   <TableRow key={product._id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.brand}</TableCell>
-                    <TableCell>{product.model}</TableCell>
+                    <TableCell>{product.model || '-'}</TableCell>
+                    <TableCell>{product.serialNumber || '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -728,7 +842,11 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
                         {product.stock}
                       </Badge>
                     </TableCell>
-                    <TableCell>{product.location}</TableCell>
+                    <TableCell>₹{(product.costPrice ?? 0).toFixed(2)}</TableCell>
+                    <TableCell>
+                      {product.sellPrice != null ? `₹${product.sellPrice.toFixed(2)}` : '-'}
+                    </TableCell>
+                    <TableCell>{product.location || '-'}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{product.category.name}</Badge>
                     </TableCell>

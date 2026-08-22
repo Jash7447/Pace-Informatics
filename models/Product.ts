@@ -1,11 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IProduct extends Document {
+export interface IProduct extends Omit<Document, 'model'> {
   name: string;
   brand: string;
-  model: string;
+  model?: string;
+  serialNumber?: string;
   stock: number;
-  location: string;
+  costPrice: number;
+  sellPrice?: number;
+  location?: string;
   remarks?: string;
   category: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -26,8 +29,20 @@ const ProductSchema = new Schema<IProduct>(
     },
     model: {
       type: String,
-      required: [true, 'Model is required'],
       trim: true,
+    },
+    serialNumber: {
+      type: String,
+      trim: true,
+    },
+    costPrice: {
+      type: Number,
+      required: [true, 'Cost price is required'],
+      min: [0, 'Cost price cannot be negative'],
+    },
+    sellPrice: {
+      type: Number,
+      min: [0, 'Sell price cannot be negative'],
     },
     stock: {
       type: Number,
@@ -37,7 +52,6 @@ const ProductSchema = new Schema<IProduct>(
     },
     location: {
       type: String,
-      required: [true, 'Location is required'],
       trim: true,
     },
     remarks: {
@@ -57,7 +71,7 @@ const ProductSchema = new Schema<IProduct>(
 
 // Index for faster queries
 ProductSchema.index({ category: 1 });
-ProductSchema.index({ name: 1, brand: 1, model: 1 });
+ProductSchema.index({ name: 1, brand: 1, model: 1, serialNumber: 1 });
 
 const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 

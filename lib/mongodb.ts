@@ -1,3 +1,5 @@
+import dns from "node:dns";
+
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -22,6 +24,31 @@ if (!global.mongoose) {
   global.mongoose = cached;
 }
 
+// async function connectDB() {
+//   if (cached.conn) {
+//     return cached.conn;
+//   }
+
+//   if (!cached.promise) {
+//     const opts = {
+//       bufferCommands: false,
+//     };
+//     console.log("ENV:", process.env.MONGODB_URI);
+//     console.log("passed this level1");
+//     cached.promise = mongoose
+//       .connect(MONGODB_URI!, opts)
+//       .then((mongoose) => {
+//         console.log("passed this level2");
+//         return mongoose;
+//       })
+//       .catch((error) => {
+//         console.error("❌ MongoDB connection error:");
+//         console.error(error);
+//         throw error;
+//       });
+//   }
+// }
+
 async function connectDB() {
   if (cached.conn) {
     return cached.conn;
@@ -31,10 +58,23 @@ async function connectDB() {
     const opts = {
       bufferCommands: false,
     };
-    console.log("ENV:", process.env.MONGODB_URI);
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      return mongoose;
-    });
+
+    console.log("MONGODB_URI exists:", !!process.env.MONGODB_URI);
+    console.log("passed this level1");
+
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
+    cached.promise = mongoose
+      .connect(MONGODB_URI!, opts)
+      .then((mongoose) => {
+        console.log("passed this level2");
+        return mongoose;
+      })
+      .catch((error) => {
+        console.error("❌ MongoDB connection error:");
+        console.error(error);
+        throw error;
+      });
   }
 
   try {
@@ -46,6 +86,8 @@ async function connectDB() {
 
   return cached.conn;
 }
+
+
 
 export default connectDB;
 

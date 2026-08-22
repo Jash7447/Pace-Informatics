@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, brand, model, stock, location, remarks, category } = body;
+    const { name, brand, model, serialNumber, stock, costPrice, sellPrice, location, remarks, category } = body;
 
     // Validate required fields
-    if (!name || !brand || !model || stock === undefined || !location || !category) {
+    if (!name || !brand || stock === undefined || costPrice === undefined || !category) {
       return NextResponse.json(
         { success: false, error: 'All required fields must be provided' },
         { status: 400 }
@@ -54,7 +54,10 @@ export async function POST(request: NextRequest) {
       name,
       brand,
       model,
+      serialNumber,
       stock: Number(stock),
+      costPrice: Number(costPrice),
+      sellPrice: sellPrice !== undefined && sellPrice !== '' ? Number(sellPrice) : undefined,
       location,
       remarks,
       category,
