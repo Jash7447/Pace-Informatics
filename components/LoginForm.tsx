@@ -100,7 +100,7 @@ export default function LoginForm({
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="mt-5">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
