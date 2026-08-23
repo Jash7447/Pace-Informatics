@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
             { header: 'Brand', key: 'brand', width: 15 },
             { header: 'Type', key: 'type', width: 15 },
             { header: 'Quantity', key: 'quantity', width: 10 },
-            { header: 'Cost Price (INR)', key: 'costPrice', width: 18 },
-            { header: 'Sell Price (INR)', key: 'sellPrice', width: 18 },
-            { header: 'Profit (INR)', key: 'profit', width: 18 },
+            { header: 'Cost Price', key: 'costPrice', width: 18 },
+            { header: 'Sell Price', key: 'sellPrice', width: 18 },
+            { header: 'Profit', key: 'profit', width: 18 },
         ];
 
         // Add rows
