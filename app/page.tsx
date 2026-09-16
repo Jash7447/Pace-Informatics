@@ -17,7 +17,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-dvh flex-col">
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -25,7 +25,7 @@ export default function Home() {
           onCategorySelect={setSelectedCategory}
           onCategoryChange={triggerStatsRefresh}
         />
-        <main className="flex-1 overflow-hidden bg-gray-50/50 min-w-0">
+        <main className="workspace-main flex min-w-0 flex-1 flex-col overflow-hidden">
           <ProductTable
             selectedCategory={selectedCategory}
             searchQuery={searchQuery}

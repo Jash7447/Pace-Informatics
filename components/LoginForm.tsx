@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ArrowRight, LoaderCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -62,10 +63,10 @@ export default function LoginForm({
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="login-card w-full max-w-md">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle className="text-3xl font-semibold tracking-tight">{title}</CardTitle>
+        <CardDescription className="leading-6">{description}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -75,6 +76,7 @@ export default function LoginForm({
             </label>
             <Input
               id="username"
+              className="h-12 bg-card"
               name="username"
               autoComplete="username"
               value={username}
@@ -89,6 +91,7 @@ export default function LoginForm({
             </label>
             <Input
               id="password"
+              className="h-12 bg-card"
               name="password"
               type="password"
               autoComplete="current-password"
@@ -98,11 +101,12 @@ export default function LoginForm({
               required
             />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-lg bg-destructive/5 p-3 text-sm text-destructive">{error}</p> : null}
         </CardContent>
         <CardFooter className="mt-5">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="h-12 w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? <LoaderCircle className="motion-safe:animate-spin" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
           </Button>
         </CardFooter>
       </form>

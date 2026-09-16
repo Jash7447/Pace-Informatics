@@ -172,8 +172,9 @@ export default function Sidebar({ selectedCategory, onCategorySelect, onCategory
   };
 
   return (
-    <aside className="w-64 border-r bg-white flex flex-col">
+    <aside className="inventory-sidebar flex w-56 shrink-0 flex-col border-r xl:w-60">
       <div className="p-4 border-b space-y-2">
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Manage workspace</p>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="w-full" size="sm">
@@ -268,7 +269,8 @@ export default function Sidebar({ selectedCategory, onCategorySelect, onCategory
         <div className="mb-2 px-2">
           <Button
             variant={selectedCategory === null ? 'secondary' : 'ghost'}
-            className="w-full justify-start"
+            className={cn('w-full justify-start', selectedCategory === null && 'shadow-xs ring-1 ring-primary/15')}
+            aria-pressed={selectedCategory === null}
             onClick={() => onCategorySelect(null)}
           >
             <FolderOpen className="h-4 w-4 mr-2" />
@@ -288,13 +290,14 @@ export default function Sidebar({ selectedCategory, onCategorySelect, onCategory
                 key={category._id}
                 className={cn(
                   'group flex items-center justify-between rounded-md px-1 py-0.5 text-sm transition-colors hover:bg-secondary/40',
-                  selectedCategory === category._id && 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  selectedCategory === category._id && 'bg-secondary text-secondary-foreground ring-1 ring-primary/15 hover:bg-secondary/80'
                 )}
               >
                 <Button
                   variant="ghost"
                   className="flex-1 justify-start text-left bg-transparent hover:bg-transparent shadow-none px-2 h-8 truncate overflow-ellipsis"
                   onClick={() => onCategorySelect(category._id)}
+                  aria-pressed={selectedCategory === category._id}
                 >
                   <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
                   <span className="truncate">{category.name}</span>

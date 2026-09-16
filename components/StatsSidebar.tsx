@@ -65,7 +65,7 @@ export default function StatsSidebar({ refreshTrigger }: StatsSidebarProps) {
 
   if (loading) {
     return (
-      <aside className="w-80 border-l bg-white p-4 overflow-y-auto hidden lg:block">
+      <aside className="stats-sidebar w-80 shrink-0 border-l p-4 overflow-y-auto hidden lg:block">
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -89,9 +89,10 @@ export default function StatsSidebar({ refreshTrigger }: StatsSidebarProps) {
   };
 
   return (
-    <aside className="w-80 border-l bg-white p-4 overflow-y-auto hidden lg:flex flex-col space-y-4">
+    <aside className="stats-sidebar w-80 shrink-0 border-l p-4 overflow-y-auto hidden lg:flex flex-col space-y-4">
+      <p className="px-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Business at a glance</p>
       {/* Overview Card */}
-      <Card>
+      <Card className="valuation-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             Inventory Valuation

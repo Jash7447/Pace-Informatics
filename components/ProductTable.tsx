@@ -427,10 +427,14 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
   });
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between p-6 border-b">
-        <h2 className="text-2xl font-semibold">Product List</h2>
-        <div className="flex gap-2">
+    <div className="flex min-h-0 flex-1 overflow-hidden flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b bg-card/60 p-4 sm:p-6">
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Your inventory</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Product List</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Keep track of every product, all in one place.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Dialog open={isSellDialogOpen} onOpenChange={setIsSellDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" onClick={handleOpenSellDialog}>
@@ -794,7 +798,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
           </Dialog>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-6">
+      <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-6">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Loading products...</p>
@@ -806,7 +810,7 @@ export default function ProductTable({ selectedCategory, searchQuery, onProductC
             </p>
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>

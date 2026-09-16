@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LogOut, Search } from 'lucide-react';
+import { Boxes, LogOut, Search } from 'lucide-react';
 
 interface HeaderProps {
   searchQuery: string;
@@ -23,20 +23,25 @@ export default function Header({ searchQuery, onSearchChange }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-white shadow-sm">
-      <div className="flex h-16 items-center justify-between px-6">
+    <header className="app-header sticky top-0 z-10 shrink-0 border-b">
+      <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-foreground">Pace Informatics</h1>
+          <span className="brand-icon"><Boxes className="size-5" aria-hidden="true" /></span>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">Pace Informatics</h1>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Inventory workspace</p>
+          </div>
         </div>
-        <div className="flex flex-1 items-center justify-center max-w-md gap-2">
+        <div className="flex w-full items-center justify-center gap-3 sm:max-w-md sm:flex-1">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search products..."
+              aria-label="Search products"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9 w-full"
+              className="h-10 w-full bg-muted/60 pl-9"
             />
           </div>
           <Button
